@@ -509,6 +509,31 @@ func cmdDictSet(opts *Options, env CmdEnvironment) (*build.File, error) {
 	return env.File, nil
 }
 
+// cmdDictSetFunc adds a key to a dict, overwriting any previous values. The value is a function/method. Method args are unsupported as of now.
+func cmdDictSetFunc(opts *Options, env CmdEnvironment) (*build.File, error) {
+	attr := env.Args[0]
+	args := env.Args[1:]
+
+	dict := &build.DictExpr{}
+	currDict, ok := env.Rule.Attr(attr).(*build.DictExpr)
+	if ok {
+		dict = currDict
+	}
+
+	for _, x := range args {
+		kv := strings.Split(x, ":")
+		expr := build.CallExpr{
+			X: &build.Ident{
+				Name:     kv[1],
+			},
+		}
+		// Set overwrites previous values.
+		DictionarySet(dict, kv[0], &expr)
+	}
+	env.Rule.SetAttr(attr, dict)
+	return env.File, nil
+}
+
 // cmdDictRemove removes a key from a dict.
 func cmdDictRemove(opts *Options, env CmdEnvironment) (*build.File, error) {
 	attr := env.Args[0]
@@ -592,6 +617,7 @@ var AllCommands = map[string]CommandInfo{
 	"copy":              {cmdCopy, true, 2, 2, "<attr> <from_rule>"},
 	"copy_no_overwrite": {cmdCopyNoOverwrite, true, 2, 2, "<attr> <from_rule>"},
 	"dict_add":          {cmdDictAdd, true, 2, -1, "<attr> <(key:value)(s)>"},
+	"dict_set_func":     {cmdDictSetFunc, true, 2, -1, "<attr> <(key:value)(s)>"},
 	"dict_set":          {cmdDictSet, true, 2, -1, "<attr> <(key:value)(s)>"},
 	"dict_remove":       {cmdDictRemove, true, 2, -1, "<attr> <key(s)>"},
 }
